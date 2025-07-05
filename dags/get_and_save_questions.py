@@ -75,7 +75,7 @@ with DAG (
     dag_id="duma_questions",
     description="This DAG is needed to get a list of questions for a period and save it to Postgres",
     schedule = "0 0 * * *",
-    start_date=pendulum.datetime(2025, 6, 11, tz="Europe/Moscow"),
+    start_date=pendulum.datetime(2025, 6, 12, tz="Europe/Moscow"),
     end_date=pendulum.datetime(2026, 6, 14, tz="Europe/Moscow"),
     max_active_tasks=3,
     default_args={"owner": OWNER, "retries": 5, "retry_delay": pendulum.duration(minutes=5)},
