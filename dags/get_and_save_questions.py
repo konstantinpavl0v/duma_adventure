@@ -43,7 +43,6 @@ def get_and_save_questions(**context):
                                      f"app_token={APP_KEY}")
 
         hook.check_response(response)
-        print(start_date, end_date)
 
         response = response.json()
 
@@ -81,8 +80,8 @@ with DAG(
         dag_id="duma_questions",
         description="This DAG is needed to get a list of questions for the period of time and save it to Postgres",
         schedule="0 0 * * *",
-        start_date=pendulum.datetime(2025, 6, 12, tz="Europe/Moscow"),
-        end_date=pendulum.datetime(2026, 6, 14, tz="Europe/Moscow"),
+        start_date=pendulum.datetime(2025, 6, 10, tz="Europe/Moscow"),
+        end_date=pendulum.datetime(2025, 6, 15, tz="Europe/Moscow"),
         max_active_tasks=3,
         default_args={"owner": OWNER, "retries": 5, "retry_delay": pendulum.duration(minutes=5)},
         max_active_runs=3,
