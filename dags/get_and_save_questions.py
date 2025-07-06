@@ -17,11 +17,17 @@ APP_KEY = Variable.get(
     key="duma_app_key"
 )
 
+# PG info
+SCHEMA = "stg"
+TABLE = "questions"
+
+
 def get_dates(**context) -> tuple[str, str]:
     start_date = context["data_interval_start"].format("YYYY-MM-DD")
     end_date = context["data_interval_end"].format("YYYY-MM-DD")
 
     return start_date, end_date
+
 
 def get_and_save_questions(**context):
     hook = HttpHook(method="GET", http_conn_id="duma_api")
@@ -31,10 +37,10 @@ def get_and_save_questions(**context):
 
     while True:
         response = hook.run(endpoint=f"/{API_KEY}/questions.json?"
-                          f"dateFrom={start_date}&"
-                          f"dateTo={end_date}&"
-                          f"page={page}&"
-                          f"app_token={APP_KEY}")
+                                     f"dateFrom={start_date}&"
+                                     f"dateTo={end_date}&"
+                                     f"page={page}&"
+                                     f"app_token={APP_KEY}")
 
         hook.check_response(response)
         print(start_date, end_date)
@@ -42,13 +48,13 @@ def get_and_save_questions(**context):
         response = response.json()
 
         if not response['questions']:
-            logging.info("No questions for this period")
+            logging.info("No questions for this period. Finish the job.")
             break
 
         with pg_hook.get_conn() as conn, conn.cursor() as cur:
             cur.execute(
-                """
-                CREATE TABLE IF NOT EXISTS stg.questions (
+                f"""
+                CREATE TABLE IF NOT EXISTS {SCHEMA}.{TABLE} (
                     name TEXT,
                     datez TIMESTAMP,
                     kodz INTEGER,
@@ -71,17 +77,17 @@ def get_and_save_questions(**context):
         page += 1
 
 
-with DAG (
-    dag_id="duma_questions",
-    description="This DAG is needed to get a list of questions for a period and save it to Postgres",
-    schedule = "0 0 * * *",
-    start_date=pendulum.datetime(2025, 6, 12, tz="Europe/Moscow"),
-    end_date=pendulum.datetime(2026, 6, 14, tz="Europe/Moscow"),
-    max_active_tasks=3,
-    default_args={"owner": OWNER, "retries": 5, "retry_delay": pendulum.duration(minutes=5)},
-    max_active_runs=3,
-    catchup=True,
-    tags=["api", "duma"]
+with DAG(
+        dag_id="duma_questions",
+        description="This DAG is needed to get a list of questions for the period of time and save it to Postgres",
+        schedule="0 0 * * *",
+        start_date=pendulum.datetime(2025, 6, 12, tz="Europe/Moscow"),
+        end_date=pendulum.datetime(2026, 6, 14, tz="Europe/Moscow"),
+        max_active_tasks=3,
+        default_args={"owner": OWNER, "retries": 5, "retry_delay": pendulum.duration(minutes=5)},
+        max_active_runs=3,
+        catchup=True,
+        tags=["api", "duma"]
 ) as dag:
     start = EmptyOperator(
         task_id="start"
@@ -97,5 +103,3 @@ with DAG (
     )
 
     start >> get_and_save_duma_questions >> stop
-
-
